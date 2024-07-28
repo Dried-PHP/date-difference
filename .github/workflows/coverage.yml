@@ -1,0 +1,67 @@
+name: Coverage
+
+on: [ pull_request, push ]
+
+jobs:
+  tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu]
+        php: [8.3]
+        setup: [stable]
+
+    name: Coverage - PHP ${{ matrix.php }}
+
+    runs-on: ${{ matrix.os }}-latest
+
+    steps:
+      - name: Checkout the code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: json, msgpack
+          tools: composer:v2
+          coverage: pcov
+
+      - name: Get composer cache directory
+        id: composer-cache
+        shell: bash
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: "php-${{ matrix.php }}-${{ matrix.setup }}-${{ matrix.os }}-${{ matrix.phpunit }}-${{ hashFiles('**/composer.json') }}"
+          restore-keys: "php-${{ matrix.php }}-${{ matrix.setup }}-${{ matrix.os }}-${{ matrix.phpunit }}-${{ hashFiles('**/composer.json') }}"
+
+      - name: Install dependencies
+        uses: nick-fields/retry@v3
+        if: steps.composer-cache.outputs.cache-hit != 'true'
+        with:
+          timeout_minutes: 10
+          max_attempts: 3
+          command: composer update --prefer-dist --no-progress --prefer-${{ matrix.setup || 'stable' }}
+
+      - name: Run test suite with coverage
+        run: php -d memory_limit=-1 -d zend.enable_gc=0 -d error_reporting=-1 vendor/phpunit/phpunit/phpunit --coverage-clover=clover.xml --coverage-text
+        env:
+          PHP_VERSION: ${{ matrix.php }}
+
+      - name: Code Climate Test Reporter
+        uses: aktions/codeclimate-test-reporter@v1
+        with:
+          codeclimate-test-reporter-id: ${{ secrets.CC_TEST_REPORTER_ID }}
+          command: after-build -t clover
+        env:
+          ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+        continue-on-error: true
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v4.0.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}

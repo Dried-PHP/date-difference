@@ -1,0 +1,59 @@
+name: Tests
+
+on: [ pull_request, push ]
+
+jobs:
+  tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu, windows]
+        php: [8.2, 8.3, 8.4]
+        setup: [lowest, stable]
+
+    name: PHP ${{ matrix.php }} - ${{ matrix.setup || 'stable' }} - ${{ matrix.os }}
+
+    runs-on: ${{ matrix.os }}-latest
+
+    steps:
+      - name: Checkout the code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: json, msgpack
+          tools: composer:v2
+          coverage: none
+
+      - name: Get composer cache directory
+        id: composer-cache
+        shell: bash
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: "php-${{ matrix.php }}-${{ matrix.setup }}-${{ matrix.os }}-${{ matrix.phpunit }}-${{ hashFiles('**/composer.json') }}"
+          restore-keys: "php-${{ matrix.php }}-${{ matrix.setup }}-${{ matrix.os }}-${{ matrix.phpunit }}-${{ hashFiles('**/composer.json') }}"
+
+      - name: Install dependencies
+        uses: nick-fields/retry@v3
+        if: steps.composer-cache.outputs.cache-hit != 'true'
+        with:
+          timeout_minutes: 10
+          max_attempts: 3
+          command: composer update --prefer-dist --no-progress --prefer-${{ matrix.setup || 'stable' }}
+
+      - name: Run test suite
+        run: php -d memory_limit=-1 -d zend.enable_gc=0 -d error_reporting=-1 vendor/phpunit/phpunit/phpunit --display-incomplete --display-skipped --display-deprecations --display-errors --display-notices --display-warnings
+        env:
+          PHP_VERSION: ${{ matrix.php }}
+
+      - name: Run test suite with coverage
+        if: matrix.coverage
+        run: php -d memory_limit=-1 -d zend.enable_gc=0 -d error_reporting=-1 vendor/phpunit/phpunit/phpunit --coverage-clover=clover.xml --coverage-text
+        env:
+          PHP_VERSION: ${{ matrix.php }}

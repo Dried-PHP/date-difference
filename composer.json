@@ -1,0 +1,32 @@
+{
+    "name": "dried/date-difference",
+    "description": "Calculate difference between dates in various units",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "kylekatarnls",
+            "email": "kylekatarnls@gmail.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {
+        "php": "^8.2",
+        "dried/date-utils": "*",
+        "symfony/translation-contracts": "^3.5"
+    },
+    "prefer-stable": true,
+    "autoload": {
+        "psr-4": {
+            "Dried\\Difference\\": "src/Dried/Difference/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^11.2"
+    }
+}
