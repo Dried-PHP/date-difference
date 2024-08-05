@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Dried\Difference;
 
 use DateInterval;
+use DateTime;
 use DateTimeImmutable;
 use DateTimeZone;
 use Dried\Difference\Difference;
@@ -27,13 +28,18 @@ final class DifferenceTest extends TestCase
                 '2024-07-28 14:15:26',
                 '2024-07-28 20:15:26',
             ],
+            [
+                24.0 * 60 * 60 * 1000 * 1000,
+                '2024-11-03 01:24:22.848816 UTC',
+                '2024-11-04 01:24:22.848816 UTC',
+            ],
         ];
     }
 
     #[DataProvider('getToMicrosecondsCases')]
     public function testToMicroseconds(float $result, string $from, string $to): void
     {
-        $difference = new Difference(new DateTimeImmutable($from), new DateTimeImmutable($to));
+        $difference = Difference::between(new DateTimeImmutable($from), new DateTimeImmutable($to));
 
         self::assertSame($result, $difference->toMicroseconds());
     }
@@ -60,7 +66,7 @@ final class DifferenceTest extends TestCase
     #[DataProvider('getToIntervalCases')]
     public function testToInterval(DateInterval $interval, string $from, string $to): void
     {
-        $difference = new Difference(new DateTimeImmutable($from), new DateTimeImmutable($to));
+        $difference = Difference::between(new DateTimeImmutable($from), new DateTimeImmutable($to));
         $result = $difference->toInterval();
 
         self::assertInstanceOf(DateInterval::class, $result);
@@ -76,9 +82,69 @@ final class DifferenceTest extends TestCase
             ),
         );
 
-        new Difference(
+        Difference::between(
             new DateTimeImmutable('now America/New_York'),
             new DateTimeImmutable('now Europe/Amsterdam'),
         );
+    }
+
+    public function testToDays(): void
+    {
+        $start = new DateTimeImmutable('2030-11-03 01:24:22.848816 UTC');
+        $end = new DateTimeImmutable('2027-05-02 01:24:22.848816 UTC');
+
+        $this->assertSame(-1281.0, Difference::from($start)->to($end)->toDays());
+
+        $start = new DateTime('2030-11-03 01:24:22.848816 America/Toronto');
+        $end = new DateTime('2027-05-02 01:24:22.848816 America/Toronto');
+
+        $this->assertSame(-1281.0, Difference::to($end)->from($start)->toDays());
+
+        $start = new class ('2030-11-03 01:24:22.848816 America/Toronto') extends DateTime {};
+        $end = new class ('2027-05-02 01:24:22.848816 America/Toronto') extends DateTime {};
+
+        $this->assertSame(-1281.0, Difference::days($start, $end));
+    }
+
+    public function testToHours(): void
+    {
+        $start = new DateTimeImmutable('2024-11-03 01:24:22.848816 UTC');
+        $end = new DateTimeImmutable('2024-11-04 01:24:22.848816 UTC');
+
+        $this->assertSame(24.0, Difference::from($start)->to($end)->toHours());
+
+        $start = new DateTime('2024-11-03 01:24:22.848816 America/Toronto');
+        $end = new DateTime('2024-11-04 01:24:22.848816 America/Toronto');
+
+        $this->assertSame(25.0, Difference::to($end)->from($start)->toHours());
+
+        $start = new class ('2024-11-03 01:24:22.848816 America/Toronto') extends DateTime {};
+        $end = new class ('2024-11-04 01:24:22.848816 America/Toronto') extends DateTime {};
+
+        $this->assertSame(25.0, Difference::hours($start, $end));
+    }
+
+    public function testToMinutes(): void
+    {
+        $start = new DateTimeImmutable('2024-11-03 01:24:22.848816 UTC');
+        $end = new DateTimeImmutable('2024-11-04 01:24:22.848816 UTC');
+
+        $this->assertSame(24.0 * 60, Difference::minutes($start, $end));
+    }
+
+    public function testToSeconds(): void
+    {
+        $start = new DateTimeImmutable('2024-11-03 01:24:22.848816 UTC');
+        $end = new DateTimeImmutable('2024-11-04 01:24:22.848816 UTC');
+
+        $this->assertSame(24.0 * 60 * 60, Difference::seconds($start, $end));
+    }
+
+    public function testToMilliseconds(): void
+    {
+        $start = new DateTimeImmutable('2024-11-03 01:24:22.848816 UTC');
+        $end = new DateTimeImmutable('2024-11-04 01:24:22.848816 UTC');
+
+        $this->assertSame(24.0 * 60 * 60 * 1000, Difference::milliseconds($start, $end));
     }
 }
