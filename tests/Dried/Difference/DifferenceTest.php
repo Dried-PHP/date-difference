@@ -88,6 +88,101 @@ final class DifferenceTest extends TestCase
         );
     }
 
+    public function testToMillennia(): void
+    {
+        $first = new DateTime('2023-12-01 00:00:00.0 Africa/Nairobi');
+        $second = new DateTime('3523-12-01 00:00:00.0 Africa/Nairobi');
+
+        $this->assertSame(1.5, Difference::millennia($first, $second));
+        $this->assertSame(-1.5, Difference::millennia($second, $first));
+    }
+
+    public function testToCenturies(): void
+    {
+        $first = new DateTime('2023-12-01 00:00:00.0 Africa/Nairobi');
+        $second = new DateTime('2173-12-01 00:00:00.0 Africa/Nairobi');
+
+        $this->assertSame(1.5, Difference::centuries($first, $second));
+        $this->assertSame(-1.5, Difference::centuries($second, $first));
+    }
+
+    public function testToDecades(): void
+    {
+        $first = new DateTime('2023-12-01 00:00:00.0 Africa/Nairobi');
+        $second = new DateTime('2038-12-01 00:00:00.0 Africa/Nairobi');
+
+        $this->assertSame(1.5, Difference::decades($first, $second));
+        $this->assertSame(-1.5, Difference::decades($second, $first));
+    }
+
+    public function testToYears(): void
+    {
+        $first = new DateTime('2023-12-01 00:00:00.0 Africa/Nairobi');
+        $second = new DateTime('2025-04-15 12:00:00.0 Africa/Nairobi');
+
+        $this->assertSame(1 + 135.5 / 365, Difference::years($first, $second));
+        $this->assertSame(-(1 + 135.5 / 365), Difference::years($second, $first));
+    }
+
+    public function testToQuarters(): void
+    {
+        $first = new DateTime('2023-12-01 00:00:00.0 Africa/Nairobi');
+        $second = new DateTime('2024-04-01 00:00:00.0 Africa/Nairobi');
+
+        $this->assertSame(4 / 3, Difference::quarters($first, $second));
+        $this->assertSame(-4 / 3, Difference::quarters($second, $first));
+    }
+
+    public function testToMonths(): void
+    {
+        $first = new DateTime('2022-12-01 00:00:00.0 Africa/Nairobi');
+        $second = new DateTime('2022-11-01 00:00:00.0 Africa/Nairobi');
+
+        $this->assertSame(-1.0, Difference::between($first, $second)->toMonths());
+        $this->assertSame(1.0, Difference::between($second, $first)->toMonths());
+
+        $first = new DateTime('2022-02-01 16:00 America/Toronto');
+        $second = new DateTime('2022-01-01 20:00 Europe/Berlin');
+        $second->setTimezone(new DateTimeZone('America/Toronto'));
+
+        $this->assertEqualsWithDelta(-1.0029761904761905, Difference::months($first, $second), 0.00000001);
+        $this->assertEqualsWithDelta(1.0029761904761905, Difference::months($second, $first), 0.00000001);
+
+        $first = new DateTime('2022-02-01 01:00 America/Toronto');
+        $second = new DateTime('2022-01-01 00:00 Europe/Berlin');
+        $second->setTimezone(new DateTimeZone('America/Toronto'));
+
+        $this->assertEqualsWithDelta(-(1 + 7 / 24 / 31), Difference::months($first, $second), 0.00000001);
+        // $second date in Toronto is 2021-12-31 18:00, so we have 6 hours in December (a 31 days month), and 1 hour in February (28 days month)
+        $this->assertEqualsWithDelta(1 + 7 / 24 / 31, Difference::months($second, $first), 0.00000001);
+        // Considered in Berlin timezone, the 7 extra hours are in February (28 days month)
+
+        $first = new DateTime('2022-02-01 01:00 Europe/Berlin');
+        $second = new DateTime('2022-01-01 00:00 America/Toronto');
+        $second->setTimezone(new DateTimeZone('Europe/Berlin'));
+
+        $this->assertEqualsWithDelta(-(1 - 5 / 24 / 31), Difference::months($first, $second), 0.00000001);
+        $this->assertEqualsWithDelta(1 - 5 / 24 / 31, Difference::months($second, $first), 0.00000001);
+    }
+
+    public function testToWeeks(): void
+    {
+        $start = new DateTimeImmutable('2030-11-03 01:24:22.848816 UTC');
+        $end = new DateTimeImmutable('2027-05-02 01:24:22.848816 UTC');
+
+        $this->assertSame(-1281.0 / 7, Difference::from($start)->to($end)->toWeeks());
+
+        $start = new DateTime('2030-11-03 01:24:22.848816 America/Toronto');
+        $end = new DateTime('2027-05-02 01:24:22.848816 America/Toronto');
+
+        $this->assertSame(-1281.0 / 7, Difference::to($end)->from($start)->toWeeks());
+
+        $start = new class ('2030-11-03 01:24:22.848816 America/Toronto') extends DateTime {};
+        $end = new class ('2027-05-02 01:24:22.848816 America/Toronto') extends DateTime {};
+
+        $this->assertSame(-1281.0 / 7, Difference::weeks($start, $end));
+    }
+
     public function testToDays(): void
     {
         $start = new DateTimeImmutable('2030-11-03 01:24:22.848816 UTC');

@@ -77,6 +77,41 @@ final class Difference
         return self::between($from, $to)->toDays();
     }
 
+    public static function weeks(DateTimeInterface $from, DateTimeInterface $to): float
+    {
+        return self::between($from, $to)->toWeeks();
+    }
+
+    public static function months(DateTimeInterface $from, DateTimeInterface $to): float
+    {
+        return self::between($from, $to)->toMonths();
+    }
+
+    public static function quarters(DateTimeInterface $from, DateTimeInterface $to): float
+    {
+        return self::between($from, $to)->toQuarters();
+    }
+
+    public static function years(DateTimeInterface $from, DateTimeInterface $to): float
+    {
+        return self::between($from, $to)->toYears();
+    }
+
+    public static function decades(DateTimeInterface $from, DateTimeInterface $to): float
+    {
+        return self::between($from, $to)->toDecades();
+    }
+
+    public static function centuries(DateTimeInterface $from, DateTimeInterface $to): float
+    {
+        return self::between($from, $to)->toCenturies();
+    }
+
+    public static function millennia(DateTimeInterface $from, DateTimeInterface $to): float
+    {
+        return self::between($from, $to)->toMillennia();
+    }
+
     public function toInterval(bool $absolute = false): DateInterval
     {
         return $this->intervals[$absolute ? 'absolute' : 'relative'] ??= $this->from->diff($this->to, $absolute);
@@ -111,6 +146,95 @@ final class Difference
     public function toDays(): float
     {
         return $this->days ??= $this->calculateDays();
+    }
+
+    public function toWeeks(): float
+    {
+        return $this->toDays() / 7;
+    }
+
+    public function toMonths(): float
+    {
+        $start = $this->from;
+        $end = $this->to;
+        [$yearStart, $monthStart, $dayStart] = explode('-', $start->format('Y-m-dHisu'));
+        [$yearEnd, $monthEnd, $dayEnd] = explode('-', $end->format('Y-m-dHisu'));
+
+        $monthsDiff = (((int) $yearEnd) - ((int) $yearStart)) * 12 +
+            ((int) $monthEnd) - ((int) $monthStart);
+
+        if ($monthsDiff > 0) {
+            $monthsDiff -= ($dayStart > $dayEnd ? 1 : 0);
+        } elseif ($monthsDiff < 0) {
+            $monthsDiff += ($dayStart < $dayEnd ? 1 : 0);
+        }
+
+        $ascending = ($start <= $end);
+        $sign = $ascending ? 1 : -1;
+        $monthsDiff = abs($monthsDiff);
+
+        if (!$ascending) {
+            [$start, $end] = [$end, $start];
+        }
+
+        $floorEnd = $start->modify("$monthsDiff months");
+
+        if ($floorEnd >= $end) {
+            return $sign * $monthsDiff;
+        }
+
+        $ceilEnd = $start->modify(($monthsDiff + 1) . ' months');
+
+        $daysToFloor = self::days($floorEnd, $end);
+        $daysToCeil = self::days($end, $ceilEnd);
+
+        return $sign * ($monthsDiff + $daysToFloor / ($daysToCeil + $daysToFloor));
+    }
+
+    public function toQuarters(): float
+    {
+        return $this->toMonths() / 3;
+    }
+
+    public function toYears(): float
+    {
+        $start = $this->from;
+        $end = $this->to;
+        $ascending = ($start <= $end);
+        $sign = $ascending ? 1 : -1;
+
+        if (!$ascending) {
+            [$start, $end] = [$end, $start];
+        }
+
+        $yearsDiff = (int) $this->toInterval()->format('%y');
+        $floorEnd = $start->modify("$yearsDiff years");
+
+        if ($floorEnd >= $end) {
+            return $sign * $yearsDiff;
+        }
+
+        $ceilEnd = $start->modify(($yearsDiff + 1) . ' years');
+
+        $daysToFloor = self::days($floorEnd, $end);
+        $daysToCeil = self::days($end, $ceilEnd);
+
+        return $sign * ($yearsDiff + $daysToFloor / ($daysToCeil + $daysToFloor));
+    }
+
+    public function toDecades(): float
+    {
+        return $this->toYears() / 10;
+    }
+
+    public function toCenturies(): float
+    {
+        return $this->toYears() / 100;
+    }
+
+    public function toMillennia(): float
+    {
+        return $this->toYears() / 1000;
     }
 
     public function calculateDays(): float
