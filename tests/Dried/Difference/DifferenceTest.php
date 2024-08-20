@@ -10,6 +10,7 @@ use DateTimeImmutable;
 use DateTimeZone;
 use Dried\Difference\Difference;
 use Dried\Difference\Exception\TimezoneMismatch;
+use Dried\Utils\Unit;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -241,5 +242,14 @@ final class DifferenceTest extends TestCase
         $end = new DateTimeImmutable('2024-11-04 01:24:22.848816 UTC');
 
         $this->assertSame(24.0 * 60 * 60 * 1000, Difference::milliseconds($start, $end));
+    }
+
+    public function testToUnits(): void
+    {
+        $start = new DateTimeImmutable('2024-11-03 01:24:22.848816 UTC');
+        $end = new DateTimeImmutable('2027-08-14 14:13:50.012455 UTC');
+
+        var_dump(Difference::between($start, $end)->toUnits(Unit::cases()));
+        exit;
     }
 }
