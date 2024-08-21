@@ -11,6 +11,7 @@ use DateTimeZone;
 use Dried\Difference\Difference;
 use Dried\Difference\Exception\TimezoneMismatch;
 use Dried\Utils\Unit;
+use Dried\Utils\UnitAmount;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -249,7 +250,61 @@ final class DifferenceTest extends TestCase
         $start = new DateTimeImmutable('2024-11-03 01:24:22.848816 UTC');
         $end = new DateTimeImmutable('2027-08-14 14:13:50.012455 UTC');
 
-        var_dump(Difference::between($start, $end)->toUnits(Unit::cases()));
-        exit;
+        self::assertSame([
+            '0 millennium',
+            '0 century',
+            '0 decade',
+            '2 year',
+            '3 quarter',
+            '0 month',
+            '1 week',
+            '4 day',
+            '12 hour',
+            '49 minute',
+            '27 second',
+            '163 millisecond',
+            '639 microsecond',
+        ], array_map(
+            static fn (UnitAmount $unitAmount): string => $unitAmount->amount . ' ' . $unitAmount->unit->value,
+            Difference::between($start, $end)->toUnits(Unit::cases()),
+        ));
+
+        self::assertSame([
+            '2 year',
+            '9 month',
+            '11 day',
+            '12 hour',
+            '49 minute',
+            '27 second',
+        ], array_map(
+            static fn (UnitAmount $unitAmount): string => $unitAmount->amount . ' ' . $unitAmount->unit->value,
+            Difference::between($start, $end)->toUnits([
+                Unit::Year,
+                Unit::Month,
+                Unit::Day,
+                Unit::Hour,
+                Unit::Minute,
+                Unit::Second,
+            ]),
+        ));
+
+        self::assertSame([
+            '-2 year',
+            '-9 month',
+            '-11 day',
+            '-12 hour',
+            '-49 minute',
+            '-27 second',
+        ], array_map(
+            static fn (UnitAmount $unitAmount): string => $unitAmount->amount . ' ' . $unitAmount->unit->value,
+            Difference::between($end, $start)->toUnits([
+                Unit::Year,
+                Unit::Month,
+                Unit::Day,
+                Unit::Hour,
+                Unit::Minute,
+                Unit::Second,
+            ]),
+        ));
     }
 }
