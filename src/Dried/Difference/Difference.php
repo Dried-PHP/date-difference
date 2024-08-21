@@ -10,6 +10,11 @@ use DateTimeInterface;
 use Dried\Difference\Builder\FromBuilder;
 use Dried\Difference\Builder\ToBuilder;
 use Dried\Difference\Exception\TimezoneMismatch;
+use Dried\Utils\Rounding;
+use Dried\Utils\RoundingMode;
+use Dried\Utils\Unit;
+use Dried\Utils\UnitAmount;
+use InvalidArgumentException;
 
 final class Difference
 {
@@ -237,7 +242,63 @@ final class Difference
         return $this->toYears() / 1000;
     }
 
-    public function calculateDays(): float
+    public function toUnit(Unit $unit): float
+    {
+        return match ($unit) {
+            Unit::Microsecond => $this->toMicroseconds(),
+            Unit::Millisecond => $this->toMilliseconds(),
+            Unit::Second => $this->toSeconds(),
+            Unit::Minute => $this->toMinutes(),
+            Unit::Hour => $this->toHours(),
+            Unit::Day => $this->toDays(),
+            Unit::Week => $this->toWeeks(),
+            Unit::Month => $this->toMonths(),
+            Unit::Quarter => $this->toQuarters(),
+            Unit::Year => $this->toYears(),
+            Unit::Decade => $this->toDecades(),
+            Unit::Century => $this->toCenturies(),
+            Unit::Millennium => $this->toMillennia(),
+        };
+    }
+
+    /**
+     * @param list<Unit> $units
+     *
+     * @return list<UnitAmount>
+     */
+    public function toUnits(array $units): array
+    {
+        foreach ($units as $unit) {
+            if (!$unit instanceof Unit) {
+                throw new InvalidArgumentException(
+                    (\is_object($unit) ? $unit::class : \gettype($unit)) .
+                    ' is not a valid Unit enum value.'
+                );
+            }
+        }
+
+        $rounding = new Rounding();
+        $amounts = [];
+        $difference = $this;
+
+        /** @var Unit $unit */
+        foreach (array_reverse(Unit::cases()) as $unit) {
+            if (!\in_array($unit, $units, true)) {
+                continue;
+            }
+
+            $amount = $rounding->roundInteger($difference->toUnit($unit), RoundingMode::ClosestToZero);
+            $amounts[] = new UnitAmount($unit, $amount);
+            $difference = self::between(
+                $difference->from->modify($unit->modifier($amount)),
+                $difference->to,
+            );
+        }
+
+        return $amounts;
+    }
+
+    private function calculateDays(): float
     {
         $negative = ($this->to < $this->from);
         [$start, $end] = $negative ? [$this->to, $this->from] : [$this->from, $this->to];

@@ -10,6 +10,9 @@ use DateTimeImmutable;
 use DateTimeZone;
 use Dried\Difference\Difference;
 use Dried\Difference\Exception\TimezoneMismatch;
+use Dried\Utils\Unit;
+use Dried\Utils\UnitAmount;
+use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -241,5 +244,92 @@ final class DifferenceTest extends TestCase
         $end = new DateTimeImmutable('2024-11-04 01:24:22.848816 UTC');
 
         $this->assertSame(24.0 * 60 * 60 * 1000, Difference::milliseconds($start, $end));
+    }
+
+    public function testToUnits(): void
+    {
+        $start = new DateTimeImmutable('2024-11-03 01:24:22.848816 UTC');
+        $end = new DateTimeImmutable('2027-08-14 14:13:50.012455 UTC');
+
+        self::assertSame([
+            '0 millennium',
+            '0 century',
+            '0 decade',
+            '2 year',
+            '3 quarter',
+            '0 month',
+            '1 week',
+            '4 day',
+            '12 hour',
+            '49 minute',
+            '27 second',
+            '163 millisecond',
+            '639 microsecond',
+        ], array_map(
+            static fn (UnitAmount $unitAmount): string => $unitAmount->amount . ' ' . $unitAmount->unit->value,
+            Difference::between($start, $end)->toUnits(Unit::cases()),
+        ));
+
+        self::assertSame([
+            '2 year',
+            '9 month',
+            '11 day',
+            '12 hour',
+            '49 minute',
+            '27 second',
+        ], array_map(
+            static fn (UnitAmount $unitAmount): string => $unitAmount->amount . ' ' . $unitAmount->unit->value,
+            Difference::between($start, $end)->toUnits([
+                Unit::Year,
+                Unit::Month,
+                Unit::Day,
+                Unit::Hour,
+                Unit::Minute,
+                Unit::Second,
+            ]),
+        ));
+
+        self::assertSame([
+            '-2 year',
+            '-9 month',
+            '-11 day',
+            '-12 hour',
+            '-49 minute',
+            '-27 second',
+        ], array_map(
+            static fn (UnitAmount $unitAmount): string => $unitAmount->amount . ' ' . $unitAmount->unit->value,
+            Difference::between($end, $start)->toUnits([
+                Unit::Year,
+                Unit::Month,
+                Unit::Day,
+                Unit::Hour,
+                Unit::Minute,
+                Unit::Second,
+            ]),
+        ));
+    }
+
+    public function testToUnitWrongClass(): void
+    {
+        self::expectExceptionObject(new InvalidArgumentException(
+            UnitAmount::class . ' is not a valid Unit enum value.',
+        ));
+
+        $start = new DateTimeImmutable('2024-11-03 01:24:22.848816 UTC');
+        $end = new DateTimeImmutable('2027-08-14 14:13:50.012455 UTC');
+
+        Difference::between($start, $end)->toUnits([UnitAmount::hours(2)]);
+    }
+
+    public function testToUnitWrongType(): void
+    {
+        self::expectExceptionObject(new InvalidArgumentException(
+            'NULL is not a valid Unit enum value.',
+        ));
+
+        $start = new DateTimeImmutable('2024-11-03 01:24:22.848816 UTC');
+        $end = new DateTimeImmutable('2027-08-14 14:13:50.012455 UTC');
+
+        Difference::between($start, $end)->toUnits([null]);
     }
 }
