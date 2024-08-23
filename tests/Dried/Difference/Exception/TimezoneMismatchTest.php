@@ -6,6 +6,7 @@ namespace Tests\Dried\Difference\Exception;
 
 use DateTimeZone;
 use Dried\Difference\Exception\TimezoneMismatch;
+use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 
 class TimezoneMismatchTest extends TestCase
@@ -16,6 +17,9 @@ class TimezoneMismatchTest extends TestCase
             new DateTimeZone('America/New_York'),
             new DateTimeZone('Europe/Amsterdam'),
         );
+
+        self::assertInstanceOf(TimezoneMismatch::class, $mismatch);
+        self::assertInstanceOf(InvalidArgumentException::class, $mismatch);
 
         self::assertSame(
             'Unable to reliably calculate a date difference between dates not being on the same timezone,' .
