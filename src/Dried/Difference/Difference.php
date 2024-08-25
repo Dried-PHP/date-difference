@@ -281,8 +281,7 @@ final class Difference
         $amounts = [];
         $difference = $this;
 
-        /** @var Unit $unit */
-        foreach (array_reverse(Unit::cases()) as $unit) {
+        foreach (Unit::cases() as $unit) {
             if (!\in_array($unit, $units, true)) {
                 continue;
             }

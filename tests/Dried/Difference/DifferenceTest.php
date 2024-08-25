@@ -279,6 +279,18 @@ final class DifferenceTest extends TestCase
             '27 second',
         ], array_map(
             static fn (UnitAmount $unitAmount): string => $unitAmount->amount . ' ' . $unitAmount->unit->value,
+            Difference::between($start, $end)->toUnits(Unit::Year->to(Unit::Second, [Unit::Quarter, Unit::Week])),
+        ));
+
+        self::assertSame([
+            '2 year',
+            '9 month',
+            '11 day',
+            '12 hour',
+            '49 minute',
+            '27 second',
+        ], array_map(
+            static fn (UnitAmount $unitAmount): string => $unitAmount->amount . ' ' . $unitAmount->unit->value,
             Difference::between($start, $end)->toUnits([
                 Unit::Year,
                 Unit::Month,
