@@ -32,7 +32,7 @@ jobs:
         shell: bash
         run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
 
-      - name: Run test suite
+      - name: Install infection
         run: |
           composer require --dev infection/infection --no-update
           composer config --no-plugins allow-plugins.infection/extension-installer true
