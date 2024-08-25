@@ -1,4 +1,4 @@
-name: Tests
+name: Infection
 
 on: [ pull_request, push ]
 
@@ -7,11 +7,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu, windows]
-        php: [8.2, 8.3, 8.4]
-        setup: [lowest, stable]
+        os: [ubuntu]
+        php: [8.4]
+        setup: [stable]
 
-    name: PHP ${{ matrix.php }} - ${{ matrix.setup || 'stable' }} - ${{ matrix.os }}
+    name: PHP ${{ matrix.php }}
 
     runs-on: ${{ matrix.os }}-latest
 
@@ -23,21 +23,26 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          extensions: json, msgpack
+          extensions: json, msgpack, intl
           tools: composer:v2
-          coverage: none
+          coverage: pcov
 
       - name: Get composer cache directory
         id: composer-cache
         shell: bash
         run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
 
+      - name: Run test suite
+        run: |
+          composer require --dev infection/infection --no-update
+          composer config --no-plugins allow-plugins.infection/extension-installer true
+
       - name: Cache composer dependencies
         uses: actions/cache@v4
         with:
           path: ${{ steps.composer-cache.outputs.dir }}
-          key: "php-${{ matrix.php }}-${{ matrix.setup }}-${{ matrix.os }}-${{ matrix.phpunit }}-${{ hashFiles('**/composer.json') }}"
-          restore-keys: "php-${{ matrix.php }}-${{ matrix.setup }}-${{ matrix.os }}-${{ matrix.phpunit }}-${{ hashFiles('**/composer.json') }}"
+          key: "infection-${{ matrix.php }}-${{ matrix.setup }}-${{ matrix.os }}-${{ matrix.phpunit }}-${{ hashFiles('**/composer.json') }}"
+          restore-keys: "infection-${{ matrix.php }}-${{ matrix.setup }}-${{ matrix.os }}-${{ matrix.phpunit }}-${{ hashFiles('**/composer.json') }}"
 
       - name: Install dependencies
         uses: nick-fields/retry@v3
@@ -47,7 +52,11 @@ jobs:
           max_attempts: 3
           command: composer update --prefer-dist --no-progress --prefer-${{ matrix.setup || 'stable' }}
 
-      - name: Run test suite
-        run: php -d memory_limit=-1 -d zend.enable_gc=0 -d error_reporting=-1 vendor/phpunit/phpunit/phpunit --display-incomplete --display-skipped --display-deprecations --display-errors --display-notices --display-warnings
-        env:
-          PHP_VERSION: ${{ matrix.php }}
+      - name: Run infection check
+        run: ./vendor/bin/infection --threads=4
+
+      - name: Archive results
+        uses: actions/upload-artifact@v4
+        with:
+          name: infection-report
+          path: infection.log
