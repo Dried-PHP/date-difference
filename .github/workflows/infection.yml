@@ -45,7 +45,7 @@ jobs:
           restore-keys: "infection-${{ matrix.php }}-${{ matrix.setup }}-${{ matrix.os }}-${{ matrix.phpunit }}-${{ hashFiles('**/composer.json') }}"
 
       - name: Install dependencies
-        uses: nick-fields/retry@v3
+        uses: nick-fields/retry@v4
         if: steps.composer-cache.outputs.cache-hit != 'true'
         with:
           timeout_minutes: 10
